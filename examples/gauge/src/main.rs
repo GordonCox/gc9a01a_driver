@@ -162,7 +162,9 @@ fn main() -> ! {
     );
 
     // Initialize the display
-    let mut display = GC9A01A::new(spi_bus, lcd_dc, lcd_cs, lcd_rst, false, LCD_WIDTH, LCD_HEIGHT);
+    let mut display = GC9A01A::new(
+        spi_bus, lcd_dc, lcd_cs, lcd_rst, false, LCD_WIDTH, LCD_HEIGHT,
+    );
     //display.init(&mut delay).unwrap();
 
     //let mut delay = Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
@@ -281,14 +283,13 @@ fn main() -> ! {
             Rgb565::BLACK,
         );
 
-
         //Clear the background
         //let background_differences = background_framebuffer.diff_with(&framebuffer);
         //display.draw_iter(background_differences).unwrap();
         //Now Draw the changes.
         //let differences = framebuffer.diff_with(&background_framebuffer);
         //display.draw_iter(differences).unwrap();
-        
+
         display.store_region(east_text_bounding_region).unwrap();
 
         //Display the next set of regions.
@@ -520,4 +521,3 @@ fn calculate_bounding_box(points: &[Point], padding: u16) -> Region {
         height: (max_y - min_y + 2 * padding) as u32,
     }
 }
-
