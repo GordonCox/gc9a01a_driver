@@ -1,0 +1,41 @@
+[package]
+name = "waveshare-rp2040-lcd-1-28-watch"
+version = "0.8.0"
+authors = ["René van Dorst <opensource@vdorst.com>", "Andrea Nall <anall@andreanal.com>", "TilCreator <contact.github@tc-j.de>", "The rp-rs Developers", "GordonCox"]
+edition = "2018"
+homepage = "https://github.com/rp-rs/rp-hal-boards/tree/main/boards/waveshare-rp2040-lcd-0_96"
+description = "Board Support Package for the Waveshare RP2040 LCD 0.96 inch"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rp-rs/rp-hal-boards.git"
+
+[dependencies]
+gc9a01a_driver = { path = "../.." } # Reference the main crate
+cortex-m-rt = { version = "0.7.3", optional = true }
+rp2040-boot2 = { version = "0.3.0", optional = true }
+rp2040-hal = { version = "0.10.2", features = ["critical-section-impl", "rt", "rp2040-e5", "rom-func-cache", "disable-intrinsics", "rom-v2-intrinsics"] }
+embedded-hal = { version = "1.0.0" }
+libm = "0.2.8"
+fugit = { version = "0.3.7" }
+embedded-graphics = { version = "0.8.1" }
+embedded-graphics-core = { version ="0.4.0" }
+profont = { version ="0.7.0" }
+panic-halt = { version = "0.2.0" }
+cortex-m = { version = "0.7.7" }
+heapless = { version = "0.8.0" }
+rand_core = {version = "0.6.4"}
+
+[dev-dependencies]
+cortex-m = { version = "0.7.7" }
+panic-halt = { version = "0.2.0" }
+nb = { version = "1.1.0" }
+
+[features]
+default = ["boot2", "rt", "critical-section-impl", "rom-func-cache"]
+critical-section-impl = ["rp2040-hal/critical-section-impl"]
+boot2 = ["rp2040-boot2"]
+rt = ["cortex-m-rt","rp2040-hal/rt"]
+rp2040-e5 = ["rp2040-hal/rp2040-e5"]
+rom-func-cache = ["rp2040-hal/rom-func-cache"]
+disable-intrinsics = ["rp2040-hal/disable-intrinsics"]
+rom-v2-intrinsics = ["rp2040-hal/rom-v2-intrinsics"]
+

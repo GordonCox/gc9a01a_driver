@@ -4,3 +4,6 @@ examples/watch/Cargo.lock
 Cargo.lock
 /examples/image_to_rgb565/target
 /examples/gauge/target
+examples/dashlight/.DS_Store
+.DS_Store
+/examples/dashlight/target
