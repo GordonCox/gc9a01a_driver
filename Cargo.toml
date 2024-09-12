@@ -1,6 +1,6 @@
 [package]
 name = "gc9a01a_driver"
-version = "0.3.2"
+version = "1.0.0"
 edition = "2021"
 authors = ["GordonCox"]
 description = "Display Driver to Support for GC9A01A LCD 1.28 inch with embedded-graphics support"
@@ -8,5 +8,5 @@ license = "MIT"
 repository = "https://github.com/GordonCox/gc9a01a_driver.git"
 
 [dependencies]
-embedded-hal = { version = "0.2" }
-embedded-graphics = { version = "0.7.1" }
+embedded-hal = { version = "1.0.0" }
+embedded-graphics = { version = "0.8.1" }

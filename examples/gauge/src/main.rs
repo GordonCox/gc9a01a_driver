@@ -3,21 +3,20 @@
 
 mod waveshare_rp2040_lcd_1_28;
 
+use embedded_hal::digital::OutputPin;
+
 use cortex_m::delay::Delay;
+use embedded_hal::delay::DelayNs;
 
 use fugit::RateExtU32;
 use gc9a01a_driver::{FrameBuffer, Orientation, Region, GC9A01A};
 use panic_halt as _; // for using write! macro
-
-use embedded_hal::adc::OneShot;
 
 use rp2040_hal::timer::Timer;
 use waveshare_rp2040_lcd_1_28::entry;
 use waveshare_rp2040_lcd_1_28::{
     hal::{
         self,
-        adc::Adc,
-        adc::AdcPin,
         clocks::{init_clocks_and_plls, Clock},
         pac,
         pio::PIOExt,
@@ -54,6 +53,23 @@ const DESIRED_FRAME_DURATION_US: u32 = 1_000_000 / 16;
 // Calculate the center of the image
 const ARROW_ROTATE_POINT_X: i32 = 240 / 2;
 const ARROW_ROTATE_POINT_Y: i32 = (240 / 10) * 8;
+
+pub struct DelayWrapper<'a> {
+    delay: &'a mut Delay,
+}
+
+impl<'a> DelayWrapper<'a> {
+    pub fn new(delay: &'a mut Delay) -> Self {
+        DelayWrapper { delay }
+    }
+}
+
+impl<'a> DelayNs for DelayWrapper<'a> {
+    fn delay_ns(&mut self, ns: u32) {
+        let us = (ns + 999) / 1000; // Convert nanoseconds to microseconds
+        self.delay.delay_us(us); // Use microsecond delay
+    }
+}
 
 #[derive(Debug)]
 enum Mode {
@@ -118,9 +134,9 @@ fn main() -> ! {
     //Initialize the Analog to Digital ADC pin for reading the resistance input.
 
     // Set up the ADC
-    let mut adc = Adc::new(pac.ADC, &mut pac.RESETS);
+    //let mut adc = Adc::new(pac.ADC, &mut pac.RESETS);
     // Configure pin 26 as an ADC pin
-    let mut adc_pin_26 = AdcPin::new(pins.gp26.into_floating_input()).unwrap();
+    //let mut adc_pin_26 = AdcPin::new(pins.gp26.into_floating_input()).unwrap();
     //let mut adc_pin = pins.gp26.into_floating_input();
 
     // Initialize LCD pins
@@ -136,8 +152,9 @@ fn main() -> ! {
         .into_push_pull_output_in_state(hal::gpio::PinState::Low);
 
     // Initialize SPI
-    let spi = hal::Spi::<_, _, _, 8>::new(pac.SPI1, (lcd_mosi, lcd_clk));
-    let spi = spi.init(
+    // Initialize SPI Bus
+    let spi_bus = hal::Spi::<_, _, _, 8>::new(pac.SPI1, (lcd_mosi, lcd_clk));
+    let spi_bus = spi_bus.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
         40.MHz(),
@@ -145,8 +162,14 @@ fn main() -> ! {
     );
 
     // Initialize the display
-    let mut display = GC9A01A::new(spi, lcd_dc, lcd_cs, lcd_rst, false, LCD_WIDTH, LCD_HEIGHT);
-    display.init(&mut delay).unwrap();
+    let mut display = GC9A01A::new(spi_bus, lcd_dc, lcd_cs, lcd_rst, false, LCD_WIDTH, LCD_HEIGHT);
+    //display.init(&mut delay).unwrap();
+
+    //let mut delay = Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut delay_wrapper = DelayWrapper::new(&mut delay);
+
+    // Use the wrapper when initializing the display
+    display.init(&mut delay_wrapper).unwrap();
     display.set_orientation(&Orientation::Portrait).unwrap();
 
     // Allocate the buffer in main and pass it to the FrameBuffer
@@ -498,95 +521,3 @@ fn calculate_bounding_box(points: &[Point], padding: u16) -> Region {
     }
 }
 
-///known resistor for voltage divider
-///The known resistor is connected between the positive and the adc_pin_26.
-///The unknown resistor (return value) is connected between adc_pin_26 and ground.
-///let known_resistor: f32 = 220.0;
-fn measure_resistance<ADC, PinType>(
-    adc: &mut ADC,
-    adc_pin: &mut PinType,
-    known_resistor: f32,
-) -> (f32, f32)
-where
-    ADC: OneShot<ADC, u16, PinType>,
-    PinType: embedded_hal::adc::Channel<ADC, ID = u8>,
-{
-    //let v_adc_resolution: f32 = 65535.0; // For 10-bit ADC
-    let v_adc_resolution: f32 = 4096.0; // 12-bit ADC resolution: 2^12 = 4096
-    let reference_voltage: f32 = 3.3; // Reference voltage for the RP2040
-
-    // Read the ADC value
-    let adc_raw_value: f32 = match adc.read(adc_pin) {
-        Ok(value) => value as f32,
-        Err(_) => {
-            return (0.0, 0.0); // Handle error by returning 0.0 for both values
-        }
-    };
-
-    // Check for very low ADC value (near zero voltage) to ensure stability
-    if adc_raw_value == 0.0 {
-        //cortex_m::asm::bkpt(); // Trigger a breakpoint for debugging
-        return (0.0, 0.0); // Could return a very high or indicative value here
-    }
-
-    // Convert the raw value to a voltage using a 16-bit ADC
-    let voltage: f32 = (adc_raw_value as f32 / v_adc_resolution as f32) * reference_voltage;
-
-    if reference_voltage == voltage {
-        return (0.0, 0.0); // Handle error by returning 0.0 for both values
-    }
-
-    // Calculate R2 using the voltage divider formula
-    let r2_ohms: f32 = (voltage * known_resistor) / (reference_voltage - voltage);
-
-    (adc_raw_value, r2_ohms)
-}
-
-/*
-DAOKI DC 0-25V Voltage Sensor Range 3 Terminal Voltage Detector Module
-Voltage input range: DC 0-25V; Voltage detection range: DC 0.02445V-25V; Voltage Analog Resolution: 0.00489V
-Output interface: "+" to 5V/3.3V, "-" to GND, "s" to the Arduino AD pins.
-This module uses a resistive divider design, so the input voltage of the voltage detection module cannot be greater than 25V (5V x 5 = 25V).
-*/
-
-/// Measures the voltage from an ADC pin using the specified ADC and pin type.
-///
-/// # Arguments
-///
-/// * `adc` - A mutable reference to the ADC instance that implements the OneShot trait.
-/// * `adc_pin` - A mutable reference to the pin type that implements the Channel trait for the ADC.
-///
-/// # Returns
-///
-/// * A tuple containing:
-///   - `adc_raw_value`: The raw ADC value as a floating-point number.
-///   - `actual_input_voltage`: The actual input voltage in the 0-25V range.
-///
-/// The function reads the raw ADC value from the specified pin, converts it to the corresponding voltage
-/// in the 0-3.3V range using the reference voltage, and then adjusts it for the voltage divider to get the
-/// actual input voltage in the 0-25V range.
-fn measure_voltage<ADC, PinType>(adc: &mut ADC, adc_pin: &mut PinType) -> (f32, f32)
-where
-    ADC: OneShot<ADC, u16, PinType>,
-    PinType: embedded_hal::adc::Channel<ADC, ID = u8>,
-{
-    let reference_voltage: f32 = 3.3; // Reference voltage for the RP2040 ADC
-    let adc_max_value: f32 = 4096.0; // 12-bit ADC resolution: 2^12 = 4096
-    let voltage_divider_ratio: f32 = 5.0; // The voltage is scaled down by a factor of 5 as per the voltage divider design
-
-    // Read the ADC value
-    let adc_raw_value: f32 = match adc.read(adc_pin) {
-        Ok(value) => value as f32,
-        Err(_) => {
-            return (0.0, 0.0); // Handle error by returning 0.0 for both values
-        }
-    };
-
-    // Convert ADC raw value to voltage (0-3.3V range)
-    let voltage_measured: f32 = (adc_raw_value / adc_max_value) * reference_voltage;
-
-    // Adjust for the voltage divider to get the actual input voltage (0-25V range)
-    let actual_input_voltage: f32 = voltage_measured * voltage_divider_ratio;
-
-    (adc_raw_value, actual_input_voltage)
-}

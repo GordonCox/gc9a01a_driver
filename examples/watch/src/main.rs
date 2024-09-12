@@ -3,9 +3,14 @@
 
 mod waveshare_rp2040_lcd_1_28;
 
+use core::fmt::Debug;
+use embedded_hal::digital::OutputPin;
+use embedded_hal::spi::{ErrorType, SpiBus, SpiDevice};
+
 use cortex_m::delay::Delay;
+use embedded_hal::delay::DelayNs;
 use fugit::RateExtU32;
-use gc9a01a_driver::{FrameBuffer, Orientation, GC9A01A, Region};
+use gc9a01a_driver::{FrameBuffer, Orientation, Region, GC9A01A};
 use panic_halt as _; // for using write! macro
 
 use rp2040_hal::timer::Timer;
@@ -41,6 +46,23 @@ const LCD_HEIGHT: u32 = 240;
 const BUFFER_SIZE: usize = (LCD_WIDTH * LCD_HEIGHT * 2) as usize;
 // 16 FPS  Is as fast as I can update the arrow smoothly so all frames are as fast as the slowest.
 const DESIRED_FRAME_DURATION_US: u32 = 1_000_000 / 16;
+
+pub struct DelayWrapper<'a> {
+    delay: &'a mut Delay,
+}
+
+impl<'a> DelayWrapper<'a> {
+    pub fn new(delay: &'a mut Delay) -> Self {
+        DelayWrapper { delay }
+    }
+}
+
+impl<'a> DelayNs for DelayWrapper<'a> {
+    fn delay_ns(&mut self, ns: u32) {
+        let us = (ns + 999) / 1000; // Convert nanoseconds to microseconds
+        self.delay.delay_us(us); // Use microsecond delay
+    }
+}
 
 /// Main entry point for the application
 #[entry]
@@ -98,19 +120,39 @@ fn main() -> ! {
     let mut _lcd_bl = pins
         .gp25
         .into_push_pull_output_in_state(hal::gpio::PinState::Low);
-
-    // Initialize SPI
-    let spi = hal::Spi::<_, _, _, 8>::new(pac.SPI1, (lcd_mosi, lcd_clk));
-    let spi = spi.init(
+    /*
+        // Initialize SPI
+        let spi = hal::Spi::<_, _, _, 8>::new(pac.SPI1, (lcd_mosi, lcd_clk));
+        let spi = spi.init(
+            &mut pac.RESETS,
+            clocks.peripheral_clock.freq(),
+            40.MHz(),
+            embedded_hal::spi::MODE_0,
+        );
+        use embedded_hal::spi::SpiDevice;
+    */
+    // Initialize SPI Bus
+    let spi_bus = hal::Spi::<_, _, _, 8>::new(pac.SPI1, (lcd_mosi, lcd_clk));
+    let spi_bus = spi_bus.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
         40.MHz(),
         embedded_hal::spi::MODE_0,
     );
 
+    // Wrap the SPI bus in SpiDeviceImpl
+    //let spi_device = SpiDeviceImpl::new(spi_bus, lcd_cs);
+
     // Initialize the display
-    let mut display = GC9A01A::new(spi, lcd_dc, lcd_cs, lcd_rst, false, LCD_WIDTH, LCD_HEIGHT);
-    display.init(&mut delay).unwrap();
+    let mut display = GC9A01A::new(spi_bus, lcd_dc, lcd_cs, lcd_rst, false, LCD_WIDTH, LCD_HEIGHT);
+    //display.init(&mut delay).unwrap();
+
+    //let mut delay = Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut delay_wrapper = DelayWrapper::new(&mut delay);
+
+    // Use the wrapper when initializing the display
+    display.init(&mut delay_wrapper).unwrap();
+
     display.set_orientation(&Orientation::Portrait).unwrap();
 
     // Allocate the buffer in main and pass it to the FrameBuffer

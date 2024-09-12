@@ -2,9 +2,9 @@
 #![no_main]
 
 use embedded_graphics::{pixelcolor::Rgb565, prelude::*};
-use embedded_hal::blocking::delay::DelayMs;
-use embedded_hal::blocking::spi::Write;
-use embedded_hal::digital::v2::OutputPin;
+use embedded_hal::delay::DelayNs;
+use embedded_hal::spi::SpiBus;
+use embedded_hal::digital::OutputPin;
 use embedded_graphics::pixelcolor::raw::RawU16;
 
 /// Enumeration of instructions for the GC9A01A display.
@@ -60,7 +60,7 @@ pub struct Region {
 /// Driver for the GC9A01A display.
 pub struct GC9A01A<SPI, DC, CS, RST>
 where
-    SPI: Write<u8>,
+    SPI: SpiBus<u8>,
     DC: OutputPin,
     CS: OutputPin,
     RST: OutputPin,
@@ -99,7 +99,7 @@ pub enum Orientation {
 
 impl<SPI, DC, CS, RST> GC9A01A<SPI, DC, CS, RST>
 where
-    SPI: Write<u8>,
+    SPI: SpiBus<u8>,
     DC: OutputPin,
     CS: OutputPin,
     RST: OutputPin,
@@ -110,7 +110,6 @@ where
     ///
     /// * `spi` - SPI interface.
     /// * `dc` - Data/command pin.
-    /// * `cs` - Chip select pin.
     /// * `rst` - Reset pin.
     /// * `rgb` - Whether the display is RGB (true) or BGR (false).
     /// * `width` - Width of the display.
@@ -145,7 +144,7 @@ where
     /// `Result<(), ()>` indicating success or failure.
     pub fn init<DELAY>(&mut self, delay: &mut DELAY) -> Result<(), ()>
     where
-        DELAY: DelayMs<u8>,
+        DELAY: DelayNs,
     {
         self.hard_reset(delay)?;
         self.write_command(0xEF, &[])?; // Inter Register Enable 2 (0xEF)
@@ -240,7 +239,7 @@ where
     /// `Result<(), ()>` indicating success or failure.
     pub fn hard_reset<DELAY>(&mut self, delay: &mut DELAY) -> Result<(), ()>
     where
-        DELAY: DelayMs<u8>,
+        DELAY: DelayNs,
     {
         self.rst.set_high().map_err(|_| ())?;
         delay.delay_ms(10);
@@ -633,7 +632,7 @@ where
 // Implementing the DrawTarget trait for the GC9A01A display driver
 impl<SPI, DC, CS, RST> DrawTarget for GC9A01A<SPI, DC, CS, RST>
 where
-    SPI: Write<u8>,
+    SPI: SpiBus<u8>,
     DC: OutputPin,
     CS: OutputPin,
     RST: OutputPin,
@@ -663,7 +662,7 @@ where
 // Implementing the OriginDimensions trait for the GC9A01A display driver
 impl<SPI, DC, CS, RST> OriginDimensions for GC9A01A<SPI, DC, CS, RST>
 where
-    SPI: Write<u8>,
+    SPI: SpiBus<u8>,
     DC: OutputPin,
     CS: OutputPin,
     RST: OutputPin,

@@ -13,12 +13,12 @@ gc9a01a_driver = { path = "../.." } # Reference the main crate
 cortex-m-rt = { version = "0.7.3", optional = true }
 rp2040-boot2 = { version = "0.3.0", optional = true }
 rp2040-hal = { version = "0.10.2", features = ["critical-section-impl", "rt", "rp2040-e5", "rom-func-cache", "disable-intrinsics", "rom-v2-intrinsics"] }
-embedded-hal = { version = "0.2.7" }
+embedded-hal = { version = "1.0.0" }
 libm = "0.2.8"
 fugit = { version = "0.3.7" }
-embedded-graphics = { version = "0.7.1" }
+embedded-graphics = { version = "0.8.1" }
 embedded-graphics-core = { version ="0.4.0" }
-profont = { version ="0.6.1" }
+profont = { version ="0.7.0" }
 panic-halt = { version = "0.2.0" }
 cortex-m = { version = "0.7.7" }
 heapless = { version = "0.8.0" }
