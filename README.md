@@ -1,7 +1,40 @@
 GC9A01A Display Driver
 ======================
 
-This crate provides a driver for the GC9A01A display, enabling basic operations such as initialization, clearing the screen, setting pixels, drawing images, and displaying buffers. The driver is built using the `embedded-hal` and `embedded-graphics` crates to ensure compatibility with various embedded platforms.
+This crate provides a driver for the GC9A01A display, enabling basic operations such as initialization, clearing the screen, setting pixels, drawing images, and displaying buffers. The driver is built using the `embedded-hal` and `embedded-graphics` crates to ensure compatibility with various embedded platforms.  The crate has been updated to accommodate the latest versions of `embedded-hal` and `embedded-graphics`.
+
+### New in Version 1.0.0
+
+With the release of **version 1.0.0**, the crate now includes support for the updated **embedded-hal 1.0.0** and **embedded-graphics 0.8.1**. This update ensures better compatibility and performance for modern embedded projects.
+
+**Key changes:**
+
+-   **embedded-hal**: Now uses version `1.0.0`, which introduces new traits and API changes for hardware abstraction.
+-   **embedded-graphics**: Updated to `0.8.1`, providing improved rendering capabilities and API adjustments for embedded graphics.
+
+toml
+
+Copy code
+
+`[dependencies]
+embedded-hal = { version = "1.0.0" }
+embedded-graphics = { version = "0.8.1" }`
+
+### Legacy Support in Version 0.3.2
+
+For projects that still rely on the older version of the crate, **version 0.3.2** continues to provide compatibility with **embedded-hal 0.2** and **embedded-graphics 0.7.1**. This is useful for maintaining projects that use older libraries or hardware.
+
+toml
+
+Copy code
+
+`[dependencies]
+embedded-hal = { version = "0.2" }
+embedded-graphics = { version = "0.7.1" }`
+
+### Upgrade Instructions
+
+To upgrade from version 0.3.2 to 1.0.0, you'll need to adjust your project's dependencies and refactor the code to account for any API changes in the dependencies, especially with embedded-hal.
 
 Features
 --------
